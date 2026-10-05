@@ -1,0 +1,31 @@
+# kubectl apply -k k8s/overlays/local
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: callprocessor
+
+resources:
+  - namespace.yaml
+  - ../../base
+  - mongo.yaml
+
+# Uses the image built by `docker compose build` (callprocessor:local).
+images:
+  - name: callprocessor
+    newName: callprocessor
+    newTag: local
+
+patches:
+  - target:
+      kind: Deployment
+      name: callprocessor
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+
+# Local only: the in-cluster Mongo has no credentials, so this isn't sensitive.
+secretGenerator:
+  - name: callprocessor-mongodb
+    literals:
+      - MONGODB_URI=mongodb://mongo:27017

@@ -1,0 +1,9 @@
+.git
+.vscode
+*.code-workspace
+Dockerfile
+.dockerignore
+compose.yaml
+data/
+*.md
+k8s

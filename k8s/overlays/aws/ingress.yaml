@@ -1,0 +1,27 @@
+# Requires the AWS Load Balancer Controller in the cluster. It creates an
+# internet-facing ALB that sends traffic straight to the pods on 8080.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: callprocessor
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /readyz
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    # For HTTPS, add an ACM certificate and listen on 443 instead:
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:REGION:ACCOUNT_ID:certificate/ID
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    # alb.ingress.kubernetes.io/ssl-redirect: "443"
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: callprocessor
+                port:
+                  name: http

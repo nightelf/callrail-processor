@@ -1,0 +1,43 @@
+# ---- Secrets ----
+# Real connection strings and credentials. Only the *.example templates are committed.
+# See k8s/overlays/aws/mongodb.env.example
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+*.pem
+*.key
+
+# ---- Go build output ----
+# `go build` names the binary after the module (callprocessor).
+/callprocessor
+*.exe
+*.test
+*.out
+coverage.*
+/bin/
+/dist/
+/tmp/
+
+# ---- Editors and OS ----
+*.code-workspace
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# ---- Terraform (for when it's added) ----
+# State and tfvars can contain secrets. Do commit .terraform.lock.hcl.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+crash.*.log
+
+# ---- Kubernetes ----
+kubeconfig
+*.kubeconfig

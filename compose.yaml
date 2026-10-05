@@ -1,0 +1,37 @@
+# Local manual testing: `docker compose up --build`
+services:
+  app:
+    build: .
+    image: callprocessor:local
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DATABASE: callrail
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8
+    ports:
+      # Host port for mongosh / Compass (mongodb://localhost:27018). The app
+      # talks to mongo:27017 on the Compose network and doesn't use this.
+      - "${MONGO_HOST_PORT:-27018}:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mongo-data:

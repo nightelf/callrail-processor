@@ -57,7 +57,7 @@ func InsertCall(ctx context.Context, document map[string]any) (any, error) {
 	return result.InsertedID, nil
 }
 
-func UpsertCall(ctx context.Context, document map[string]any) (string, error) {
+func UpsertCall(ctx context.Context, document map[string]any) (UpsertResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 	filter := bson.M{"id": document["id"]}
@@ -71,11 +71,11 @@ func UpsertCall(ctx context.Context, document map[string]any) (string, error) {
 
 	switch { // was: return result.UpsertedCount == 1, nil
 	case result.UpsertedCount == 1:
-		return string(Inserted), nil
+		return Inserted, nil
 	case result.ModifiedCount == 1:
-		return string(Updated), nil
+		return Updated, nil
 	default:
-		return string(Unchanged), nil
+		return Unchanged, nil
 	}
 }
 

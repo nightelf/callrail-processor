@@ -32,7 +32,7 @@ func CreateCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := http.StatusOK
-	if result == string(persistence.Inserted) {
+	if result == persistence.Inserted {
 		status = http.StatusCreated
 	}
 	writeJSON(w, status, map[string]any{"status": "success", "result": result, "id": id})

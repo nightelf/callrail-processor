@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -66,20 +67,44 @@ func UpsertCall(ctx context.Context, document map[string]any) (bool, error) {
 	return result.UpsertedCount == 1, nil
 }
 
-func ListCalls(ctx context.Context) ([]bson.M, error) {
+// ListCalls returns one page of calls, most recently received first, along
+// with the total number of calls. page starts at 1.
+func ListCalls(ctx context.Context, page, limit int64) ([]bson.M, int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 
-	cursor, err := calls.Find(ctx, bson.D{})
-	if err != nil {
-		return nil, err
-	}
-
 	results := []bson.M{} // encodes as [] rather than null when empty
-	if err := cursor.All(ctx, &results); err != nil {
-		return nil, err
+	var total int64
+
+	// The page and the total are independent queries, so run them at the same
+	// time. If either fails, errgroup cancels ctx and the other one stops.
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		// ObjectIDs increase with insertion time, so sorting on _id gives
+		// newest-first using the index every collection already has.
+		opts := options.Find().
+			SetSort(bson.D{{Key: "_id", Value: -1}}).
+			SetSkip((page - 1) * limit).
+			SetLimit(limit)
+
+		cursor, err := calls.Find(ctx, bson.D{}, opts)
+		if err != nil {
+			return err
+		}
+		return cursor.All(ctx, &results)
+	})
+
+	g.Go(func() error {
+		n, err := calls.CountDocuments(ctx, bson.D{})
+		total = n
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, 0, err
 	}
-	return results, nil
+	return results, total, nil
 }
 
 func EnsureIndexes(ctx context.Context) error {

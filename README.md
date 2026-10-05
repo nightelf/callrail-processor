@@ -9,11 +9,17 @@ Calls are upserted on CallRail's call `id`, so retried or repeated webhooks for 
 | Method | Path         | Description                                                                 |
 | ------ | ------------ | --------------------------------------------------------------------------- |
 | `POST` | `/api/calls` | Save a call. Body is the CallRail JSON payload and must include a string `id`. Returns `201` for a new call, `200` when an existing call was updated. |
-| `GET`  | `/api/calls` | List all stored calls.                                                      |
+| `GET`  | `/api/calls` | List stored calls, most recently received first. Paginated: `?page=1&limit=50` (`limit` 1–200, default 50). |
 | `GET`  | `/healthz`   | Liveness check. Returns `200` whenever the process is serving HTTP.         |
 | `GET`  | `/readyz`    | Readiness check. Returns `200` if MongoDB responds to a ping, `503` if not. |
 
-Errors: `400` for invalid JSON or a missing `id`, `405` for unsupported methods, `500` if the database write or read fails.
+`GET /api/calls` responds with:
+
+```json
+{ "data": [ ... ], "page": 1, "limit": 50, "total": 123, "total_pages": 3 }
+```
+
+Errors: `400` for invalid JSON, a missing `id`, or an invalid `page` or `limit`, `405` for unsupported methods, `500` if the database write or read fails.
 
 ## Configuration
 
@@ -62,7 +68,7 @@ curl -X POST http://localhost:8080/api/calls \
   -H "Content-Type: application/json" \
   --data @data/callrail_sample.json
 
-curl http://localhost:8080/api/calls
+curl "http://localhost:8080/api/calls?page=1&limit=10"
 ```
 
 ## Kubernetes

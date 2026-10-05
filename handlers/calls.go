@@ -24,7 +24,7 @@ func CreateCall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := persistence.UpsertCall(r.Context(), document)
+	result, err := persistence.UpsertCall(r.Context(), document)
 	if err != nil {
 		log.Printf("failed to upsert call %s: %v", id, err)
 		http.Error(w, "Failed to save call", http.StatusInternalServerError)
@@ -32,10 +32,10 @@ func CreateCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := http.StatusOK
-	if created {
+	if result == string(persistence.Inserted) {
 		status = http.StatusCreated
 	}
-	writeJSON(w, status, map[string]any{"status": "success", "id": id})
+	writeJSON(w, status, map[string]any{"status": "success", "result": result, "id": id})
 }
 
 const (

@@ -10,9 +10,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type UpsertResult string
+
 const (
-	Collection   = "calls"
-	queryTimeout = 10 * time.Second
+	Collection                = "calls"
+	queryTimeout              = 10 * time.Second
+	Inserted     UpsertResult = "inserted"
+	Updated      UpsertResult = "updated"
+	Unchanged    UpsertResult = "unchanged"
 )
 
 // One client is shared by the whole app; it manages its own connection pool.
@@ -52,7 +57,7 @@ func InsertCall(ctx context.Context, document map[string]any) (any, error) {
 	return result.InsertedID, nil
 }
 
-func UpsertCall(ctx context.Context, document map[string]any) (bool, error) {
+func UpsertCall(ctx context.Context, document map[string]any) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 	filter := bson.M{"id": document["id"]}
@@ -61,10 +66,17 @@ func UpsertCall(ctx context.Context, document map[string]any) (bool, error) {
 
 	result, err := calls.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	return result.UpsertedCount == 1, nil
+	switch { // was: return result.UpsertedCount == 1, nil
+	case result.UpsertedCount == 1:
+		return string(Inserted), nil
+	case result.ModifiedCount == 1:
+		return string(Updated), nil
+	default:
+		return string(Unchanged), nil
+	}
 }
 
 // ListCalls returns one page of calls, most recently received first, along

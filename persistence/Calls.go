@@ -69,7 +69,7 @@ func UpsertCall(ctx context.Context, document map[string]any) (UpsertResult, err
 		return "", err
 	}
 
-	switch { // was: return result.UpsertedCount == 1, nil
+	switch {
 	case result.UpsertedCount == 1:
 		return Inserted, nil
 	case result.ModifiedCount == 1:

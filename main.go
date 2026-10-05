@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("failed to ensure MongoDB indexes: %v", err)
 	}
 	cancelIndex()
-	
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/calls", handlers.ListCalls)
 	mux.HandleFunc("POST /api/calls", handlers.CreateCall)

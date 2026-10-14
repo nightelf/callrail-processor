@@ -153,10 +153,11 @@ aws ecr get-login-password --region us-west-2 | docker login --username AWS --pa
 docker buildx build --platform linux/amd64 -t "$ECR:0.1.0" --push .
 ```
 
-Set `newName` in `k8s/overlays/aws/kustomization.yaml` to the ECR repository URL, then:
+The overlay's image uses an `ACCOUNT_ID` placeholder so the AWS account ID isn't committed. Fill it in while applying, and set `newTag` in `k8s/overlays/aws/kustomization.yaml` if you pushed a different tag:
 
 ```bash
-kubectl apply -k k8s/overlays/aws
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+kubectl kustomize k8s/overlays/aws | sed "s/ACCOUNT_ID/$ACCOUNT_ID/" | kubectl apply -f -
 kubectl -n callprocessor get ingress callprocessor   # ADDRESS is the ALB hostname, ready after 2 to 3 minutes
 ```
 

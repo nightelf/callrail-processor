@@ -13,7 +13,9 @@ resources:
   - ingress.yaml
   - pdb.yaml
 
-# newName is the ECR repository: `terraform -chdir=terraform output -raw ecr_repository_url`
+# ACCOUNT_ID is a placeholder so the AWS account ID stays out of git. Deploy
+# by substituting it (see "Deploy the app" in README.md):
+#   kubectl kustomize k8s/overlays/aws | sed "s/ACCOUNT_ID/$(aws sts get-caller-identity --query Account --output text)/" | kubectl apply -f -
 # newTag is the tag you pushed.
 images:
   - name: callprocessor

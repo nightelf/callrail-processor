@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+
+# MongoDB Atlas: Organization > Settings
+atlas_org_id = "YOUR_ATLAS_ORG_ID"
+
+# MongoDB Atlas: Organization > Access Manager > Applications > API Keys
+# The key needs the "Organization Project Creator" role.
+atlas_public_key  = "YOUR_ATLAS_PUBLIC_KEY"
+atlas_private_key = "YOUR_ATLAS_PRIVATE_KEY"
+
+# Optional: get an email when the AWS account's monthly spend passes $5 and $10.
+# budget_alert_email = "you@example.com"
+
+# Optional: restrict kubectl access to your own IP.
+# cluster_endpoint_allowed_cidrs = ["203.0.113.10/32"]

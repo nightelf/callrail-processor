@@ -1,6 +1,5 @@
 # ---- Secrets ----
 # Real connection strings and credentials. Only the *.example templates are committed.
-# See k8s/overlays/aws/mongodb.env.example
 .env
 .env.*
 *.env
@@ -27,8 +26,9 @@ coverage.*
 .DS_Store
 *.swp
 
-# ---- Terraform (for when it's added) ----
-# State and tfvars can contain secrets. Do commit .terraform.lock.hcl.
+# ---- Terraform ----
+# State and tfvars contain secrets (Atlas API key, database password).
+# See terraform/terraform.tfvars.example. Do commit .terraform.lock.hcl.
 .terraform/
 *.tfstate
 *.tfstate.*

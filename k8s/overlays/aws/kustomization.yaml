@@ -1,30 +1,25 @@
 # kubectl apply -k k8s/overlays/aws
+#
+# Terraform (see terraform/) creates the "callprocessor" namespace and the
+# "callprocessor-mongodb" Secret that the Deployment reads, so neither is
+# defined here. Run `terraform apply` before applying this overlay.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 namespace: callprocessor
 
 resources:
-  - namespace.yaml
   - ../../base
   - ingress.yaml
   - pdb.yaml
 
-# Set these to your ECR repository and the tag you pushed, e.g.
-#   cd k8s/overlays/aws && kustomize edit set image callprocessor=<acct>.dkr.ecr.<region>.amazonaws.com/callprocessor:<tag>
+# newName is the ECR repository: `terraform -chdir=terraform output -raw ecr_repository_url`
+# newTag is the tag you pushed.
 images:
   - name: callprocessor
-    newName: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/callprocessor
+    newName: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/callprocessor
     newTag: "0.1.0"
 
 replicas:
   - name: callprocessor
     count: 2
-
-# The Atlas connection string is read from mongodb.env, which is gitignored.
-# Copy mongodb.env.example → mongodb.env and fill it in. (Terraform can take
-# over creating this Secret later.)
-secretGenerator:
-  - name: callprocessor-mongodb
-    envs:
-      - mongodb.env

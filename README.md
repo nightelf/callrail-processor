@@ -80,7 +80,7 @@ k8s/
 ├── base/              # Deployment and Service (port 80 → 8080), shared by all environments
 └── overlays/
     ├── local/         # Docker Desktop Kubernetes, with an in-cluster MongoDB
-    └── aws/           # EKS: ALB Ingress, ECR image, 2 replicas, MongoDB Atlas
+    └── aws/           # EKS: ALB Ingress, ECR image, 2 replicas (infrastructure in terraform/)
 ```
 
 ### Local cluster (Docker Desktop)
@@ -103,19 +103,62 @@ kubectl delete -k k8s/overlays/local
 
 ### AWS (EKS and MongoDB Atlas)
 
-1. Build for the cluster's architecture and push to ECR:
-   ```bash
-   docker buildx build --platform linux/amd64 -t <account>.dkr.ecr.<region>.amazonaws.com/callprocessor:<tag> --push .
-   ```
-2. Set the image in `k8s/overlays/aws/kustomization.yaml`.
-3. Copy `k8s/overlays/aws/mongodb.env.example` to `mongodb.env` and add the Atlas connection string. `mongodb.env` is gitignored.
-4. Allow the cluster's outbound IP (its NAT gateway) in the Atlas IP access list.
-5. Deploy:
-   ```bash
-   kubectl apply -k k8s/overlays/aws
-   ```
+`terraform/` creates everything the app needs on AWS and Atlas:
 
-The Ingress requires the [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/) in the cluster. It listens on HTTP by default; the annotations for HTTPS with an ACM certificate are in `k8s/overlays/aws/ingress.yaml`, commented out.
+- a VPC, an EKS cluster with two worker nodes, and the AWS Load Balancer Controller
+- an ECR repository for the image
+- a free MongoDB Atlas M0 cluster, a database user, and an IP access list entry for the cluster's outbound IP
+- the `callprocessor` namespace and the `callprocessor-mongodb` Secret holding the connection string
+
+**This costs money while it exists**: roughly $0.25 an hour, about $150 a month if left running. Destroy it when you're done.
+
+#### Prerequisites
+
+- Terraform 1.11 or later, the AWS CLI, `kubectl` and Docker
+- AWS credentials allowed to create VPC, EKS, IAM, EC2 and ECR resources, active in your shell (for example `export AWS_PROFILE=...`)
+- A MongoDB Atlas account, its organization ID, and an API key with the Organization Project Creator role
+
+#### Create the infrastructure
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars   # then fill in the Atlas values
+terraform init
+terraform plan
+terraform apply                                # takes about 15 to 20 minutes
+```
+
+#### Deploy the app
+
+```bash
+# Point kubectl at the new cluster
+$(terraform output -raw configure_kubectl)
+
+# Build for the nodes' architecture and push to ECR
+ECR=$(terraform output -raw ecr_repository_url)
+cd ..
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin "${ECR%%/*}"
+docker buildx build --platform linux/amd64 -t "$ECR:0.1.0" --push .
+```
+
+Set `newName` in `k8s/overlays/aws/kustomization.yaml` to the ECR repository URL, then:
+
+```bash
+kubectl apply -k k8s/overlays/aws
+kubectl -n callprocessor get ingress callprocessor   # ADDRESS is the ALB hostname, ready after 2 to 3 minutes
+```
+
+The Ingress listens on HTTP by default. The annotations for HTTPS with an ACM certificate are in `k8s/overlays/aws/ingress.yaml`, commented out.
+
+#### Tear down
+
+```bash
+kubectl delete -k k8s/overlays/aws
+kubectl -n callprocessor get ingress             # wait until this shows nothing: the ALB is gone
+cd terraform && terraform destroy
+```
+
+Delete the Kubernetes resources first: the ALB is created by the load balancer controller, not by Terraform. `terraform destroy` also deletes the Atlas cluster and its data. Afterwards, check the AWS console (EKS, EC2 instances, load balancers, NAT gateways, Elastic IPs) to confirm nothing is left.
 
 ## Project layout
 
@@ -125,6 +168,7 @@ handlers/        # HTTP handlers
 persistence/     # MongoDB access
 data/            # sample CallRail payload
 k8s/             # Kubernetes manifests
+terraform/       # AWS (VPC, EKS, ECR) and MongoDB Atlas infrastructure
 Dockerfile       # multi-stage build, distroless non-root image
 compose.yaml     # local app + MongoDB
 ```

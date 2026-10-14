@@ -71,6 +71,18 @@ curl -X POST http://localhost:8080/api/calls \
 curl "http://localhost:8080/api/calls?page=1&limit=10"
 ```
 
+### Seed sample calls
+
+`cmd/seed` posts 20 varied calls based on `data/callrail_sample.json`, five at a time, then re-sends four of them to show the `unchanged` and `updated` results and lists the newest calls:
+
+```bash
+go run ./cmd/seed                              # against http://localhost:8080
+go run ./cmd/seed -url http://<ALB hostname>   # against EKS
+go run ./cmd/seed -h                           # all options (-n, -concurrency, -resend, -sample)
+```
+
+Call ids are fixed (`CALseed0001` to `CALseed0020`), so running it again updates the same calls instead of adding more.
+
 ## Kubernetes
 
 Manifests are in `k8s/` and use [Kustomize](https://kustomize.io/), which is built into `kubectl`.
@@ -164,6 +176,7 @@ Delete the Kubernetes resources first: the ALB is created by the load balancer c
 
 ```
 main.go          # config, routes, startup and graceful shutdown
+cmd/seed/        # posts sample calls to a running instance
 handlers/        # HTTP handlers
 persistence/     # MongoDB access
 data/            # sample CallRail payload
